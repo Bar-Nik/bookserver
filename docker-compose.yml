@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+
+  postgres1:
+    container_name: pg-book_server
+    image: postgres:16.0
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_USER: nikolay
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: book_database
+    volumes:
+      - postgres-data-book_server:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres-data-book_server:

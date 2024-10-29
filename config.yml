@@ -1,0 +1,3 @@
+# dsn: "host=localhost user=nikolay password=12345 dbname=book_database port=5433 sslmode=disable"
+dsn: "postgres://nikolay:12345@localhost:5433/book_database?sslmode=disable"
+loglevel: -4
