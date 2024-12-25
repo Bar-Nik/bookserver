@@ -1,9 +1,9 @@
 package api
 
 import (
+	"bookserver_git/internal/logger"
 	"log/slog"
 	"net/http"
-	"server/internal/logger"
 
 	"github.com/gorilla/mux"
 )

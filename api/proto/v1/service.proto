@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package api.proto.v1;
+
+import "google/api/annotations.proto";
+import "validate/validate.proto";
+
+option go_package = ".;pb";
+
+service BookAPI {
+    rpc AddBook(AddBookRequest) returns(AddBookResponse) {
+        option (google.api.http) = {
+            post: "/book",
+            body: "*"
+        };
+    }
+    rpc GetBook(GetBookRequest) returns(GetBookResponse) {
+        option (google.api.http) = {
+            get: "/book",
+            response_body: "*"
+        };
+    }
+    rpc DeleteBook(DeleteBookRequest) returns(DeleteBookResponse) {
+        option (google.api.http) = {
+            delete: "/book"
+        };
+    }
+    rpc UpdateBook(UpdateBookRequest) returns(UpdateBookResponse) {
+        option (google.api.http) = {
+            put: "/book",
+            body: "*"
+        };
+    }
+    rpc AllBooks(AllBooksRequests) returns(AllBooksResponse) {
+        option (google.api.http) = {
+            get: "/books",
+            response_body: "*"
+        };
+    }
+}
+
+message AddBookRequest{
+    string title = 1 [(validate.rules).string = {
+    min_len: 1,
+    max_len: 32
+  }];
+    int64 year = 2 [(validate.rules).int64 = {
+    gte: 0,
+    lte: 9999
+  }];
+} 
+message AddBookResponse{
+    Book book = 1;
+}
+
+message GetBookRequest{
+    int64 id = 1;
+}
+message GetBookResponse{
+    Book book = 1;
+}
+
+message DeleteBookRequest{
+    int64 id = 1;
+}
+message DeleteBookResponse{}
+
+message UpdateBookRequest{
+    int64 id = 1;
+    string title = 2 [(validate.rules).string = {
+    min_len: 1,
+    max_len: 32
+  }];
+    int64 year = 3 [(validate.rules).int64 = {
+    gte: 0,
+    lte: 9999
+  }];
+}
+message UpdateBookResponse{}
+
+message AllBooksRequests{
+}
+message AllBooksResponse{
+    repeated Book books = 1;
+}
+
+message Book{
+    int64 id = 1;
+    string title = 2 [(validate.rules).string = {
+    min_len: 1,
+    max_len: 32
+  }];
+    int64 year = 3 [(validate.rules).int64 = {
+    gte: 0,
+    lte: 9999
+  }];
+}

@@ -1,16 +1,22 @@
 package main
 
 import (
+	pb "bookserver_git/api/proto/v1"
+	"bookserver_git/internal/api"
+	"bookserver_git/internal/db"
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
-	"server/internal/api"
-	"server/internal/db"
 
-	"github.com/gorilla/mux"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
+	grpc_run "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"gopkg.in/yaml.v3"
 
 	_ "github.com/lib/pq"
@@ -26,6 +32,16 @@ type Config struct {
 }
 
 func main() {
+
+	loggingOpts := []logging.Option{
+		logging.WithLogOnEvents(
+			logging.StartCall,
+			logging.FinishCall,
+			logging.PayloadReceived,
+			logging.PayloadSent,
+		),
+	}
+
 	yamlContent, err := os.ReadFile("./config.yml")
 	if err != nil {
 		log.Fatal(err)
@@ -41,19 +57,7 @@ func main() {
 		Level: slog.Level(systemConfig.LogLevel),
 	}))
 
-	// config := postgres.Open(systemConfig.DSN)
-	// gormDB, err := gorm.Open(config, &gorm.Config{})
-	// if err != nil {
-	// 	panic("failed to connect database")
-	// }
-
-	// err = gormDB.AutoMigrate(&domain.Book{})
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	os.Exit(1)
-	// }
-
-	r := mux.NewRouter()
+	// r := mux.NewRouter()
 
 	migrator, err := migrate.New(
 		"file://migrations",
@@ -74,22 +78,65 @@ func main() {
 	}
 
 	repo := db.NewRepository(rowSQLConn)
-	r.Use(api.Logging(log))
+	// r.Use(api.Logging(log))
 
 	ourServer := api.Server{
 		Database: repo,
 	}
 
-	r.HandleFunc("/book", ourServer.GetBook).Methods(http.MethodGet)
-	r.HandleFunc("/book", ourServer.AddBook).Methods(http.MethodPost)
-	r.HandleFunc("/book", ourServer.DeleteBook).Methods(http.MethodDelete)
-	r.HandleFunc("/book", ourServer.UpdateBook).Methods(http.MethodPut)
-	r.HandleFunc("/books", ourServer.AllBooks).Methods(http.MethodGet)
+	ln, err := net.Listen("tcp", "127.0.0.1:8081")
+	if err != nil {
+		fmt.Println(err)
+	}
+	server := grpc.NewServer(
+		grpc.Creds(insecure.NewCredentials()),
+		grpc.ChainUnaryInterceptor(
+			// Order matters e.g. tracing interceptor have to create span first for the later exemplars to work.
+			logging.UnaryServerInterceptor(interceptorLogger(log), loggingOpts...),
+		),
+	)
+	pb.RegisterBookAPIServer(server, &ourServer)
+
+	go func() {
+		if err = server.Serve(ln); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	conn, err := grpc.NewClient("127.0.0.1:8081",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer conn.Close()
+
+	gw := grpc_run.NewServeMux()
+
+	err = pb.RegisterBookAPIHandler(context.TODO(), gw, conn)
+	if err != nil {
+		fmt.Println(err)
+	}
+	gwServer := &http.Server{
+		Addr:    "0.0.0.0:8080",
+		Handler: gw,
+	}
+
+	// r.HandleFunc("/book", ourServer.GetBook).Methods(http.MethodGet)
+	// r.HandleFunc("/book", ourServer.AddBook).Methods(http.MethodPost)
+	// r.HandleFunc("/book", ourServer.DeleteBook).Methods(http.MethodDelete)
+	// r.HandleFunc("/book", ourServer.UpdateBook).Methods(http.MethodPut)
+	// r.HandleFunc("/books", ourServer.AllBooks).Methods(http.MethodGet)
 
 	log.Warn("Server started")
-	err = http.ListenAndServe("127.0.0.1:8080", r)
+	err = gwServer.ListenAndServe()
 	if err != nil {
 		log.Debug("Server failed")
-
 	}
+}
+
+func interceptorLogger(l *slog.Logger) logging.Logger {
+	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
+		l.Log(ctx, slog.Level(lvl), msg, fields...)
+	})
 }

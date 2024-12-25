@@ -1,0 +1,3 @@
+github.com/bufbuild/protoc-gen-validate v1.1.1-SNAPSHOT.14 h1:futtvtATGXDsMGWcAc6sWhAOoFQvmWZLmyHrvupXPig=
+github.com/googleapis/googleapis v0.0.0-20241213145259-f4eff5440fd07389f820d22d2a55690c6390dc6d h1:Hfb7ZMMj1EYo6NxNfj8BxB4znKbX+6GWUj360MPhL1c=
+github.com/grpc-ecosystem/grpc-gateway v0.0.0-20241216004613-7f7fc0526945e46a59d208ebfb446539ebbf0d30 h1:j0dSqKoNY/gFfIehW8E6LuutWi656ebL7Tz7AJm9ukI=
