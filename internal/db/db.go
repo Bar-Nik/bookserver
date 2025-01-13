@@ -1,9 +1,9 @@
 package db
 
 import (
+	"bookserver_git/internal/domain"
 	"context"
 	"database/sql"
-	"server/internal/domain"
 )
 
 type Repository struct {
