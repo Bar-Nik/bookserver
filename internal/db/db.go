@@ -15,8 +15,8 @@ func NewRepository(rawDB *sql.DB) *Repository {
 }
 
 func (d Repository) SaveBookToDatabase(book domain.Book, ctx context.Context) (domain.Book, error) {
-	query := "INSERT INTO books (title, year_book) VALUES($1,$2) RETURNING *"
-	err := d.db.QueryRowContext(ctx, query, book.Title, book.Year).Scan(&book.ID, &book.Title, &book.Year)
+	query := "INSERT INTO books (title, year_book, user_id) VALUES($1,$2,$3) RETURNING *"
+	err := d.db.QueryRowContext(ctx, query, book.Title, book.Year, book.UserID).Scan(&book.ID, &book.Title, &book.Year, &book.UserID)
 	if err != nil {
 		return domain.Book{}, err
 	}
@@ -70,4 +70,39 @@ func (d Repository) AllBooksFromDatabase(ctx context.Context) ([]domain.Book, er
 	}
 
 	return books, nil
+}
+
+func (d Repository) SaveUserToDatabase(ctx context.Context, user domain.User) (domain.User, error) {
+	query := "INSERT INTO users (email, password) VALUES($1,$2) RETURNING *"
+	err := d.db.QueryRowContext(ctx, query, user.Email, user.Password).Scan(&user.ID, &user.Email, &user.Password)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
+}
+func (d Repository) GetUserByEmail(ctx context.Context, email string) (domain.User, error) {
+	var user domain.User
+	query := "SELECT * FROM users WHERE email = $1"
+	err := d.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.Email, &user.Password)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
+}
+func (d Repository) SaveSessionToDatabase(ctx context.Context, session domain.Session) error {
+	query := "INSERT INTO sessions (user_id, token, ip, user_agent) VALUES($1,$2,$3,$4) RETURNING *"
+	err := d.db.QueryRowContext(ctx, query, session.UserID, session.Token, session.IP, session.UserAgent).Scan(&session.ID, &session.UserID, &session.Token, &session.IP, &session.UserAgent, &session.CreatedAt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (d Repository) GetUserByToken(ctx context.Context, token string) (int, error) {
+	var session domain.Session
+	query := "SELECT * FROM sessions WHERE token = $1"
+	err := d.db.QueryRowContext(ctx, query, token).Scan(&session.ID, &session.UserID, &session.Token, &session.IP, &session.UserAgent, &session.CreatedAt)
+	if err != nil {
+		return 0, err
+	}
+	return session.UserID, nil
 }

@@ -4,6 +4,15 @@ import (
 	pb "bookserver_git/api/proto/v1"
 	"bookserver_git/internal/domain"
 	"context"
+	"errors"
+	"fmt"
+	"net"
+
+	"github.com/google/uuid"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 )
 
 type Repository interface {
@@ -12,32 +21,44 @@ type Repository interface {
 	DeleteBookFromDatebase(id uint, ctx context.Context) error
 	UpdateBookFromDatabase(book domain.Book, ctx context.Context) error
 	AllBooksFromDatabase(ctx context.Context) ([]domain.Book, error)
+
+	SaveUserToDatabase(ctx context.Context, user domain.User) (domain.User, error)
+	GetUserByEmail(ctx context.Context, email string) (domain.User, error)
+	SaveSessionToDatabase(ctx context.Context, session domain.Session) error
+	GetUserByToken(ctx context.Context, token string) (int, error)
 }
 
 type Server struct {
 	Database Repository
 }
 
+const authScheme = "Bearer"
+
 func (s Server) AddBook(ctx context.Context, request *pb.AddBookRequest) (*pb.AddBookResponse, error) {
-	// log, found := logger.FromContext(ctx)
-	// if !found {
-	// 	return nil, errors.New("Help")
-	// }
-	newBook := domain.Book{
-		Title: request.Title,
-		Year:  int(request.Year),
+	token, err := auth.AuthFromMD(ctx, authScheme)
+	if err != nil {
+		return nil, fmt.Errorf("AuthFromMD: %w", err)
 	}
 
+	userID, err := s.Database.GetUserByToken(ctx, token)
+
+	newBook := domain.Book{
+		Title:  request.Title,
+		Year:   int(request.Year),
+		UserID: userID,
+	}
 	result, err := s.Database.SaveBookToDatabase(newBook, ctx)
+	fmt.Println(result)
 	if err != nil {
 		return nil, err
 	}
 	// log.Info("Добавили книгу в bd")
 
 	return &pb.AddBookResponse{Book: &pb.Book{
-		Id:    int64(result.ID),
-		Title: result.Title,
-		Year:  int64(result.Year),
+		Id:     int64(result.ID),
+		Title:  result.Title,
+		Year:   int64(result.Year),
+		UserId: int64(result.UserID),
 	}}, nil
 }
 
@@ -92,6 +113,70 @@ func (s Server) AllBooks(ctx context.Context, request *pb.AllBooksRequests) (*pb
 	}
 
 	return &pb.AllBooksResponse{Books: pbBooks}, nil
+}
+
+func (s Server) Registration(ctx context.Context, request *pb.RegistrationRequest) (*pb.RegistrationResponse, error) {
+	newUser := domain.User{
+		Email:    request.Email,
+		Password: request.Password,
+	}
+	registeredUser, err := s.Database.SaveUserToDatabase(ctx, newUser)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.RegistrationResponse{Id: int64(registeredUser.ID)}, nil
+
+}
+
+var (
+	ErrInvalidPassword = errors.New("invalid password")
+)
+
+func (s Server) Login(ctx context.Context, request *pb.LoginRequest) (*pb.LoginResponse, error) {
+	user, err := s.Database.GetUserByEmail(ctx, request.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.Password != request.Password {
+		return nil, ErrInvalidPassword
+	}
+	ip, err := originFromCtx(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	token := uuid.New().String()
+
+	session := domain.Session{
+		UserID:    user.ID,
+		Token:     token,
+		IP:        ip,
+		UserAgent: "", // TODO
+	}
+	err = s.Database.SaveSessionToDatabase(ctx, session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = grpc.SendHeader(ctx, metadata.MD{"authorization": {token}})
+
+	return &pb.LoginResponse{User: &pb.User{
+		Id:    int64(user.ID),
+		Email: user.Email,
+	}}, nil
+}
+
+func originFromCtx(ctx context.Context) (string, error) {
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("peer.FromContext: Error")
+	}
+	host, _, err := net.SplitHostPort(p.Addr.String())
+	if err != nil {
+		return "", fmt.Errorf("net.SplitHostPort: %w", err)
+	}
+	return host, nil
 }
 
 func toBook(u domain.Book) *pb.Book {
