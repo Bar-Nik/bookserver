@@ -27,7 +27,7 @@ func (d Repository) SaveBookToDatabase(book domain.Book, ctx context.Context) (d
 func (d Repository) GetBookFromDatebase(id uint, ctx context.Context) (domain.Book, error) {
 	var book domain.Book
 	query := "SELECT * FROM books WHERE id = $1"
-	err := d.db.QueryRowContext(ctx, query, id).Scan(&book.ID, &book.Title, &book.Year)
+	err := d.db.QueryRowContext(ctx, query, id).Scan(&book.ID, &book.Title, &book.Year, &book.UserID)
 	if err != nil {
 		return domain.Book{}, err
 	}
@@ -65,7 +65,7 @@ func (d Repository) AllBooksFromDatabase(ctx context.Context) ([]domain.Book, er
 	}
 	for row.Next() {
 		var book domain.Book
-		row.Scan(&book.ID, &book.Title, &book.Year)
+		row.Scan(&book.ID, &book.Title, &book.Year, &book.UserID)
 		books = append(books, book)
 	}
 

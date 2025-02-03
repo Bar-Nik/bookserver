@@ -69,9 +69,10 @@ func (s Server) GetBook(ctx context.Context, request *pb.GetBookRequest) (*pb.Ge
 		return nil, err
 	}
 	return &pb.GetBookResponse{Book: &pb.Book{
-		Id:    int64(book.ID),
-		Title: book.Title,
-		Year:  int64(book.Year),
+		Id:     int64(book.ID),
+		Title:  book.Title,
+		Year:   int64(book.Year),
+		UserId: int64(book.UserID),
 	}}, nil
 
 }
