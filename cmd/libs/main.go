@@ -29,6 +29,8 @@ import (
 type Config struct {
 	DSN      string `yaml:"dsn"`
 	LogLevel int    `yaml:"log_level"`
+	Host     string `yaml:"host"`
+	HostGRPC string `yaml:"host_grpc"`
 }
 
 func main() {
@@ -84,7 +86,7 @@ func main() {
 		Database: repo,
 	}
 
-	ln, err := net.Listen("tcp", "127.0.0.1:8081")
+	ln, err := net.Listen("tcp", systemConfig.HostGRPC)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -103,7 +105,7 @@ func main() {
 		}
 	}()
 
-	conn, err := grpc.NewClient("127.0.0.1:8081",
+	conn, err := grpc.NewClient(systemConfig.HostGRPC,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
@@ -118,7 +120,7 @@ func main() {
 		fmt.Println(err)
 	}
 	gwServer := &http.Server{
-		Addr:    "0.0.0.0:8080",
+		Addr:    systemConfig.Host,
 		Handler: gw,
 	}
 

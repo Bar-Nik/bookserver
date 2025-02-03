@@ -37,6 +37,19 @@ service BookAPI {
             response_body: "*"
         };
     }
+    rpc Registration(RegistrationRequest) returns(RegistrationResponse){
+        option (google.api.http) = {
+            post: "/user",
+            body: "*"
+        };
+    }
+    rpc Login(LoginRequest) returns(LoginResponse){
+        option (google.api.http) = {
+            post: "/auth",
+            body: "*"
+        };
+    }
+    
 }
 
 message AddBookRequest{
@@ -78,10 +91,30 @@ message UpdateBookRequest{
 }
 message UpdateBookResponse{}
 
-message AllBooksRequests{
-}
+message AllBooksRequests{}
 message AllBooksResponse{
     repeated Book books = 1;
+}
+
+message RegistrationRequest{
+    string email = 1;
+    string password = 2;
+}
+message RegistrationResponse{
+    int64 id = 1;
+}
+
+message LoginRequest{
+    string email = 1;
+    string password = 2;
+}
+message LoginResponse{
+     User user = 1;
+}
+
+message User{
+    int64 id = 1;
+    string email =2;
 }
 
 message Book{
@@ -91,6 +124,10 @@ message Book{
     max_len: 32
   }];
     int64 year = 3 [(validate.rules).int64 = {
+    gte: 0,
+    lte: 9999
+  }];
+  int64 user_id = 4 [(validate.rules).int64 = {
     gte: 0,
     lte: 9999
   }];

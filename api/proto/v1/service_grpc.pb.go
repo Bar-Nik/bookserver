@@ -19,11 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BookAPI_AddBook_FullMethodName    = "/api.proto.v1.BookAPI/AddBook"
-	BookAPI_GetBook_FullMethodName    = "/api.proto.v1.BookAPI/GetBook"
-	BookAPI_DeleteBook_FullMethodName = "/api.proto.v1.BookAPI/DeleteBook"
-	BookAPI_UpdateBook_FullMethodName = "/api.proto.v1.BookAPI/UpdateBook"
-	BookAPI_AllBooks_FullMethodName   = "/api.proto.v1.BookAPI/AllBooks"
+	BookAPI_AddBook_FullMethodName      = "/api.proto.v1.BookAPI/AddBook"
+	BookAPI_GetBook_FullMethodName      = "/api.proto.v1.BookAPI/GetBook"
+	BookAPI_DeleteBook_FullMethodName   = "/api.proto.v1.BookAPI/DeleteBook"
+	BookAPI_UpdateBook_FullMethodName   = "/api.proto.v1.BookAPI/UpdateBook"
+	BookAPI_AllBooks_FullMethodName     = "/api.proto.v1.BookAPI/AllBooks"
+	BookAPI_Registration_FullMethodName = "/api.proto.v1.BookAPI/Registration"
+	BookAPI_Login_FullMethodName        = "/api.proto.v1.BookAPI/Login"
 )
 
 // BookAPIClient is the client API for BookAPI service.
@@ -35,6 +37,8 @@ type BookAPIClient interface {
 	DeleteBook(ctx context.Context, in *DeleteBookRequest, opts ...grpc.CallOption) (*DeleteBookResponse, error)
 	UpdateBook(ctx context.Context, in *UpdateBookRequest, opts ...grpc.CallOption) (*UpdateBookResponse, error)
 	AllBooks(ctx context.Context, in *AllBooksRequests, opts ...grpc.CallOption) (*AllBooksResponse, error)
+	Registration(ctx context.Context, in *RegistrationRequest, opts ...grpc.CallOption) (*RegistrationResponse, error)
+	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 }
 
 type bookAPIClient struct {
@@ -95,6 +99,26 @@ func (c *bookAPIClient) AllBooks(ctx context.Context, in *AllBooksRequests, opts
 	return out, nil
 }
 
+func (c *bookAPIClient) Registration(ctx context.Context, in *RegistrationRequest, opts ...grpc.CallOption) (*RegistrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegistrationResponse)
+	err := c.cc.Invoke(ctx, BookAPI_Registration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bookAPIClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginResponse)
+	err := c.cc.Invoke(ctx, BookAPI_Login_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BookAPIServer is the server API for BookAPI service.
 // All implementations should embed UnimplementedBookAPIServer
 // for forward compatibility.
@@ -104,6 +128,8 @@ type BookAPIServer interface {
 	DeleteBook(context.Context, *DeleteBookRequest) (*DeleteBookResponse, error)
 	UpdateBook(context.Context, *UpdateBookRequest) (*UpdateBookResponse, error)
 	AllBooks(context.Context, *AllBooksRequests) (*AllBooksResponse, error)
+	Registration(context.Context, *RegistrationRequest) (*RegistrationResponse, error)
+	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 }
 
 // UnimplementedBookAPIServer should be embedded to have
@@ -127,6 +153,12 @@ func (UnimplementedBookAPIServer) UpdateBook(context.Context, *UpdateBookRequest
 }
 func (UnimplementedBookAPIServer) AllBooks(context.Context, *AllBooksRequests) (*AllBooksResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AllBooks not implemented")
+}
+func (UnimplementedBookAPIServer) Registration(context.Context, *RegistrationRequest) (*RegistrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Registration not implemented")
+}
+func (UnimplementedBookAPIServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
 func (UnimplementedBookAPIServer) testEmbeddedByValue() {}
 
@@ -238,6 +270,42 @@ func _BookAPI_AllBooks_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BookAPI_Registration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegistrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookAPIServer).Registration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BookAPI_Registration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookAPIServer).Registration(ctx, req.(*RegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BookAPI_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookAPIServer).Login(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BookAPI_Login_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookAPIServer).Login(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BookAPI_ServiceDesc is the grpc.ServiceDesc for BookAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -264,6 +332,14 @@ var BookAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AllBooks",
 			Handler:    _BookAPI_AllBooks_Handler,
+		},
+		{
+			MethodName: "Registration",
+			Handler:    _BookAPI_Registration_Handler,
+		},
+		{
+			MethodName: "Login",
+			Handler:    _BookAPI_Login_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
